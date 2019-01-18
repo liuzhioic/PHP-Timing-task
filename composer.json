@@ -1,0 +1,22 @@
+{
+    "name": "liuzhioic/PHP-Timing-task",
+    "description": "原生php实现计划任务",
+    "authors": [
+        {
+            "name": "liuzhioic",
+            "email": "liuzhioic@gmail.com"
+        }
+    ],
+    "license": "Apache-2.0",
+    "require": {
+        "topthink/framework": "5.1.*"
+    },
+    "autoload": {
+        "psr-4": {
+            "\\timeingTask": "src/"
+        },
+        "files": [
+            
+        ]
+    }
+}
