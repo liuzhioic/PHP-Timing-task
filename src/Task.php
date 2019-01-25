@@ -1,5 +1,5 @@
 <?php
-namespace timeingTask;
+namespace app\task;
 
 /**
  * @小智
@@ -7,51 +7,49 @@ namespace timeingTask;
  */
 class Task
 {
-    public $task_name;
-    public $interval   = 1;
-    public $exec_count = 1;
-    public $namespace;
-    public $params;
-
-    private $wait_for_exec = false;
-
-    private $task_list      = [];
-    private $task_list_path = __DIR__ . '/TASKLIST';
-
     public $task_id;
 
-    public function __construct(int $task_id = 0)
-    {
+    public $url;
+    public $content;
+    public $interval   = 0;
+    public $exec_count = 1;
 
-        // 读取运行中的任务列表
-        $this->task_list = unserialize(file_get_contents($this->task_list_path));
+    private $is_run = false;
+
+    private $task_list = [];
+    private $task_path = __DIR__ . '/task_list';
+
+    /**
+     * [__construct 从文件初始化任务对象]
+     * @param int|integer $task_id [任务id]
+     */
+    public function __construct(string $task_id)
+    {
+        $this->task_id = $task_id;
+
+        // 读取已经在队列中的任务列表
+        $this->task_list = unserialize(file_get_contents($this->task_path));
 
         !$this->task_list && $this->task_list = [];
 
-        if (!empty($task_id)) {
-            $this->task_id = $task_id;
+        // 如果当前初始化的任务存在任务列表中，则读取任务列表中的数据
+        if (array_key_exists($task_id, $this->task_list)) {
+            $this->url        = $this->task_list[$task_id]['url'];
+            $this->content    = $this->task_list[$task_id]['content'];
+            $this->interval   = $this->task_list[$task_id]['interval'];
+            $this->exec_count = $this->task_list[$task_id]['exec_count'];
 
-            // 如果当前初始化的任务存在任务列表中，则读取任务列表中的数据
-            if (array_key_exists($task_id, $this->task_list)) {
-                $this->task_name  = $this->task_list[$task_id]['task_name'];
-                $this->interval   = $this->task_list[$task_id]['interval'];
-                $this->exec_count = $this->task_list[$task_id]['exec_count'];
-                $this->namespace  = $this->task_list[$task_id]['namespace'];
-                $this->params     = unserialize($this->task_list[$task_id]['params']);
-
-                $this->wait_for_exec = true;
-            }
+            $this->is_run = true;
         }
-
     }
 
     /**
-     * [waitForExec 任务是否在等待执行列表中/任务是否已经添加]
-     * @return bool
+     * [isRun 任务是否在队列中/在文件中]
+     * @return boolean 
      */
-    public function waitForExec(): bool
+    public function isRun()
     {
-        return $this->wait_for_exec;
+        return $this->is_run;
     }
 
     /**
@@ -60,36 +58,30 @@ class Task
      */
     public function start()
     {
-        if (empty($this->namespace)) {
-            throw new \Exception("任务命名空间为空");
-        }
-
         $this->stop();
 
-        $task_id = uniqid();
-
-        $this->task_list[$task_id] = [
-            'task_name'  => $this->task_name,
+        $this->task_list[$this->task_id] = [
+            'url'        => $this->url,
             'interval'   => $this->interval,
             'exec_count' => $this->exec_count,
-            'namespace'  => $this->namespace,
-            'params'     => serialize($this->params),
+            'content'    => $this->content,
         ];
-
-        file_put_contents($this->task_list_path, serialize($this->task_list));
+        
+        file_put_contents($this->task_path, serialize($this->task_list));
 
         return $task_id;
     }
 
     /**
-     * [stop 停止任务]
+     * [stop 停止任务，重启的话需要一秒钟，因为要等待列表载入，时钟周期1秒]
      * @return null
      */
     public function stop()
     {
-        if ($this->wait_for_exec) {
+        if ($this->is_run) {
             unset($this->task_list[$this->task_id]);
-            file_put_contents($this->task_list_path, serialize($this->task_list));
+            file_put_contents($this->task_path, serialize($this->task_list));
+            sleep(1);
         }
     }
 }
